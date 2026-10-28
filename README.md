@@ -2,15 +2,17 @@
 
 一款使用 HTML、CSS 和 JavaScript 编写的单页坦克大战小游戏。
 
-## 运行
+## 在线游玩
 
-在浏览器中直接打开：
+复制下面的网址并在浏览器中打开，即可直接运行游戏：
 
 ```text
-src/TankWar.html
+https://takakiuri.github.io/First-Repository-for-my-tank-war/src/TankWar.html
 ```
 
-也可以在 IntelliJ IDEA 中打开本项目后，通过浏览器预览该文件。
+也可以点击此处开始游戏：
+
+[开始坦克大战](https://takakiuri.github.io/First-Repository-for-my-tank-war/src/TankWar.html)
 
 ## 项目结构
 
