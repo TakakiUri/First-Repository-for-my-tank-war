@@ -289,6 +289,7 @@ const W = FIELD + PANEL;                // 512
 const H = FIELD;                        // 416
 const TANK = 32, BULLET = 8;
 const MAX_SHOTS_PER_LINE = 2;
+const GAME_VERSION = 'v1.1.0';
 
 const EMPTY = 0, BRICK = 1, STEEL = 2, WATER = 3, TREE = 4, ICE = 5, BASE = 6;
 
@@ -1540,8 +1541,9 @@ function drawTitle(){
   ctx.save();
   ctx.shadowColor = 'rgba(240,208,48,.55)';
   ctx.shadowBlur = 16;
-  pixelText('BATTLE CITY', W / 2, 56, 22, '#f0d030', 'center');
+  pixelText('BATTLE CITY', W / 2 - 28, 56, 22, '#f0d030', 'center');
   ctx.restore();
+  pixelText(GAME_VERSION, W - 8, 62, 8, '#c9d3e0', 'right');
   cjkText('坦 克 大 战', W / 2, 96, 22, '#c9d3e0');
 
   // 对阵的双方
