@@ -1,6 +1,6 @@
 # TankWar
 
-一款使用 HTML、CSS 和 JavaScript 编写的单页坦克大战小游戏。
+一款使用 HTML编写的单页坦克大战小游戏。
 
 ## 运行
 
