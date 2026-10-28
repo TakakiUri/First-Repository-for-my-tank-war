@@ -261,7 +261,7 @@ body{
     <span>
       <kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移动　<kbd>空格</kbd> / <kbd>J</kbd> 开火　<kbd>P</kbd> 暂停
     </span>
-    <button class="mute" id="mute" type="button" aria-pressed="false">SOUND ON</button>
+    <button class="mute" id="mute" type="button" aria-pressed="true">SOUND OFF</button>
   </div>
 </div>
 
@@ -289,7 +289,7 @@ const W = FIELD + PANEL;                // 512
 const H = FIELD;                        // 416
 const TANK = 32, BULLET = 8;
 const MAX_SHOTS_PER_LINE = 2;
-const GAME_VERSION = 'v1.1.0';
+const GAME_VERSION = 'v1.2.0';
 
 const EMPTY = 0, BRICK = 1, STEEL = 2, WATER = 3, TREE = 4, ICE = 5, BASE = 6;
 
@@ -412,7 +412,8 @@ if (document.fonts && document.fonts.load){
 /* ============================================================
    音效
    ============================================================ */
-let AC = null, muted = false, noiseBuf = null;
+let AC = null, muted = true, noiseBuf = null;
+const SFX_GAIN = 2.6;
 
 function ensureAudio(){
   if (AC) return AC;
@@ -424,6 +425,7 @@ function tone(freq, dur, type, vol, slideTo){
   if (muted) return;
   const ac = ensureAudio(); if (!ac) return;
   if (ac.state === 'suspended') ac.resume();
+  vol = Math.min(0.30, vol * SFX_GAIN);
   const t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = type || 'square';
@@ -438,6 +440,7 @@ function noise(dur, vol, freq){
   if (muted) return;
   const ac = ensureAudio(); if (!ac) return;
   if (ac.state === 'suspended') ac.resume();
+  vol = Math.min(0.30, vol * SFX_GAIN);
   if (!noiseBuf){
     const len = Math.floor(ac.sampleRate * 0.5);
     noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
@@ -470,6 +473,103 @@ const sfx = {
   over(){ [392,330,262,196].forEach((f,i) => setTimeout(() => tone(f,0.3,'square',0.06), i*180)); },
   start(){ [392,523,659].forEach((f,i) => setTimeout(() => tone(f,0.1,'square',0.05), i*90)); }
 };
+
+/* ============================================================
+   背景音乐
+   ============================================================ */
+const music = (() => {
+  const tracks = {
+    title: new Audio('../assets/audio/TankWar_BGM.wav'),
+    battle: new Audio('../assets/audio/TankWar_BGM_Loop.wav')
+  };
+  const level = { title:0.36, battle:0.42 };
+  let scene = 'title', unlocked = false, paused = false, fadeFrame = 0;
+
+  for (const track of Object.values(tracks)){
+    track.loop = true;
+    track.preload = 'auto';
+    track.volume = 0;
+  }
+
+  function safelyPlay(track){
+    const attempt = track.play();
+    if (attempt) attempt.catch(() => {});
+  }
+
+  function stopAll(){
+    cancelAnimationFrame(fadeFrame);
+    for (const track of Object.values(tracks)){
+      track.volume = 0;
+      track.pause();
+    }
+  }
+
+  function fadeTo(nextScene, restart){
+    scene = nextScene;
+    if (!unlocked) return;
+    if (muted || paused){
+      stopAll();
+      return;
+    }
+
+    const active = tracks[scene];
+    const inactive = scene === 'title' ? tracks.battle : tracks.title;
+    if (restart) active.currentTime = 0;
+    if (active.paused) safelyPlay(active);
+    if (!inactive.paused) safelyPlay(inactive);
+
+    cancelAnimationFrame(fadeFrame);
+    const startedAt = performance.now();
+    const duration = 650;
+    const from = { title:tracks.title.volume, battle:tracks.battle.volume };
+
+    const step = now => {
+      const p = Math.min(1, (now - startedAt) / duration);
+      const eased = p * p * (3 - 2 * p);
+      for (const name of ['title', 'battle']){
+        const target = name === scene ? level[name] : 0;
+        tracks[name].volume = from[name] + (target - from[name]) * eased;
+      }
+      if (p < 1){
+        fadeFrame = requestAnimationFrame(step);
+      } else if (inactive.currentTime > 0){
+        inactive.pause();
+      }
+    };
+    fadeFrame = requestAnimationFrame(step);
+  }
+
+  return {
+    init(){
+      // A page already granted autoplay may start immediately. Otherwise the
+      // first pointer/key gesture unlocks the intended scene.
+      if (muted) return;
+      const attempt = tracks[scene].play();
+      if (attempt) attempt.then(() => {
+        unlocked = true;
+        fadeTo(scene, false);
+      }).catch(() => {});
+    },
+    unlock(){
+      if (unlocked) return;
+      unlocked = true;
+      fadeTo(scene, false);
+    },
+    play(nextScene, restart = false){ fadeTo(nextScene, restart); },
+    pause(){
+      paused = true;
+      stopAll();
+    },
+    resume(){
+      paused = false;
+      fadeTo(scene, false);
+    },
+    mute(on){
+      if (on) stopAll();
+      else fadeTo(scene, false);
+    }
+  };
+})();
 
 /* ============================================================
    贴图预渲染
@@ -1152,6 +1252,7 @@ function startGame(){
   G.level = 0; G.score = 0; G.lives = 3;
   G.curtain = { t:1, phase:'open', cb:null };
   startLevel();
+  music.play('battle', true);
   sfx.start();
 }
 
@@ -1232,15 +1333,21 @@ const muteBtn = document.getElementById('mute');
 function toggleMute(){
   muted = !muted;
   ensureAudio();
+  music.mute(muted);
   muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
   muteBtn.setAttribute('aria-pressed', String(muted));
 }
 muteBtn.addEventListener('click', toggleMute);
+document.addEventListener('pointerdown', () => music.unlock(), { capture:true, passive:true });
 
 function confirmKey(){
   ensureAudio();
+  music.unlock();
   if (G.state === 'title') startGame();
-  else if (G.state === 'over' || G.state === 'win'){ G.state = 'title'; G.timer = 0; }
+  else if (G.state === 'over' || G.state === 'win'){
+    G.state = 'title'; G.timer = 0;
+    music.play('title', true);
+  }
 }
 
 window.addEventListener('keydown', e => {
@@ -1249,16 +1356,17 @@ window.addEventListener('keydown', e => {
     e.preventDefault();
   if (e.repeat) return;
   ensureAudio();
+  music.unlock();
 
   if (k === 'm'){ toggleMute(); return; }
   if (k === 'p'){
-    if (G.state === 'play') G.state = 'paused';
-    else if (G.state === 'paused') G.state = 'play';
+    if (G.state === 'play'){ G.state = 'paused'; music.pause(); }
+    else if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
     return;
   }
   if (k === 'enter' || k === ' '){
     if (G.state === 'title' || G.state === 'over' || G.state === 'win'){ confirmKey(); return; }
-    if (G.state === 'paused'){ G.state = 'play'; return; }
+    if (G.state === 'paused'){ G.state = 'play'; music.resume(); return; }
   }
   if (KEYDIR[k]) pushDir(KEYDIR[k]);
   if (k === ' ' || k === 'j') fireHeld = true;
@@ -1273,7 +1381,10 @@ window.addEventListener('keyup', e => {
 window.addEventListener('blur', () => {
   dirStack.length = 0;
   fireHeld = false;
-  if (G.state === 'play') G.state = 'paused';
+  if (G.state === 'play'){
+    G.state = 'paused';
+    music.pause();
+  }
 });
 
 /* 触屏手柄 */
@@ -1288,13 +1399,14 @@ for (const btn of pad.querySelectorAll('button')){
   const down = e => {
     e.preventDefault();
     ensureAudio();
+    music.unlock();
     btn.setAttribute('data-held', '');
     if (isFire){
       fireHeld = true;
       if (G.state === 'title' || G.state === 'over' || G.state === 'win') confirmKey();
-      else if (G.state === 'paused') G.state = 'play';
+      else if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
     } else if (dir){
-      if (G.state === 'paused') G.state = 'play';
+      if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
       pushDir(dir);
     }
   };
@@ -1674,6 +1786,9 @@ function boot(data){
     G.lives = Math.max(1, data.lives || 3);
     G.curtain = { t:1, phase:'open', cb:null };
     startLevel();
+    music.play('battle', true);
+  } else {
+    music.init();
   }
   requestAnimationFrame(frame);
 }
