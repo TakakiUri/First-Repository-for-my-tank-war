@@ -391,7 +391,7 @@ const W = FIELD + PANEL;                // 512
 const H = FIELD;                        // 416
 const TANK = 32, BULLET = 8;
 const MAX_SHOTS_PER_LINE = 2;
-const GAME_VERSION = 'v1.2.0';
+const GAME_VERSION = 'v1.2.1';
 
 const EMPTY = 0, BRICK = 1, STEEL = 2, WATER = 3, TREE = 4, ICE = 5, BASE = 6;
 
@@ -582,12 +582,12 @@ const sfx = {
 const music = (() => {
   const sources = {
     title: [
-      { url:'../assets/audio/TankWar_BGM.m4a', type:'audio/mp4' },
-      { url:'../assets/audio/TankWar_BGM.wav', type:'audio/wav' }
+      { url:'../assets/audio/TankWar_BGM.m4a?v=48m22', type:'audio/mp4' },
+      { url:'../assets/audio/TankWar_BGM.wav?v=48m22', type:'audio/wav' }
     ],
     battle: [
-      { url:'../assets/audio/TankWar_BGM_Loop.m4a', type:'audio/mp4' },
-      { url:'../assets/audio/TankWar_BGM_Loop.wav', type:'audio/wav' }
+      { url:'../assets/audio/TankWar_BGM_Loop.m4a?v=48m22', type:'audio/mp4' },
+      { url:'../assets/audio/TankWar_BGM_Loop.wav?v=48m22', type:'audio/wav' }
     ]
   };
   const labels = {
@@ -598,8 +598,10 @@ const music = (() => {
   const tracks = {};
   const playAttempts = new WeakMap();
   const objectUrls = {};
-  let preparePromise = null;
+  const prepared = { title:false, battle:false };
+  const preparation = { title:null, battle:null };
   let scene = 'title', paused = false;
+  let restartPending = false;
 
   for (const name of Object.keys(sources)){
     const track = new Audio();
@@ -645,13 +647,7 @@ const music = (() => {
     }
   }
 
-  function fadeTo(nextScene, restart){
-    scene = nextScene;
-    if (muted || paused){
-      stopAll();
-      return;
-    }
-
+  function activateScene(restart){
     const active = tracks[scene];
     const inactive = scene === 'title' ? tracks.battle : tracks.title;
     active.preload = 'auto';
@@ -665,6 +661,23 @@ const music = (() => {
     inactive.volume = 0;
     safelyPlay(active);
     if (!inactive.paused) inactive.pause();
+  }
+
+  function fadeTo(nextScene, restart){
+    scene = nextScene;
+    restartPending = restart;
+    if (muted || paused){
+      stopAll();
+      return;
+    }
+    if (!prepared[scene]){
+      preloadTrack(scene).catch(error => {
+        console.warn('[music] background preload failed', scene, error);
+      });
+      return;
+    }
+    activateScene(restartPending);
+    restartPending = false;
   }
 
   for (const [name, track] of Object.entries(tracks)){
@@ -780,19 +793,33 @@ const music = (() => {
     throw lastError || new Error(`unable to load ${name} music`);
   }
 
-  function prepare(onProgress){
-    if (preparePromise) return preparePromise;
-    preparePromise = (async () => {
-      const names = Object.keys(sources);
-      for (let i = 0; i < names.length; i += 1){
-        const start = i / names.length;
-        const span = 1 / names.length;
-        await prepareTrack(names[i], start, span, onProgress);
+  function preloadTrack(name, onProgress = () => {}){
+    if (prepared[name]) return Promise.resolve();
+    if (preparation[name]) return preparation[name];
+
+    const promise = prepareTrack(name, 0, 1, onProgress).then(() => {
+      prepared[name] = true;
+      if (shouldPlay(name)){
+        activateScene(restartPending);
+        restartPending = false;
       }
-      onProgress(1, '音乐加载完成');
-    })();
-    preparePromise.catch(() => { preparePromise = null; });
-    return preparePromise;
+    });
+    preparation[name] = promise;
+    promise.catch(() => {
+      if (preparation[name] === promise) preparation[name] = null;
+    });
+    return promise;
+  }
+
+  function prepare(onProgress){
+    return preloadTrack('title', onProgress).then(() => {
+      onProgress(1, '初始界面音乐加载完成');
+      // The title screen is usable now. Battle music continues loading while
+      // the player reads the controls and starts a game.
+      preloadTrack('battle').catch(error => {
+        console.warn('[music] background preload failed', error);
+      });
+    });
   }
 
   return {
