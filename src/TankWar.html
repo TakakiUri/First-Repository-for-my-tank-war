@@ -491,7 +491,7 @@ const music = (() => {
   const level = { title:0.36, battle:0.42 };
   const tracks = {};
   const playAttempts = new WeakMap();
-  let scene = 'title', paused = false, fadeFrame = 0;
+  let scene = 'title', paused = false;
 
   for (const [name, candidates] of Object.entries(sources)){
     let sourceIndex = 0;
@@ -532,8 +532,6 @@ const music = (() => {
   }
 
   function stopAll(){
-    cancelAnimationFrame(fadeFrame);
-    fadeFrame = 0;
     for (const track of Object.values(tracks)){
       track.volume = 0;
       track.pause();
@@ -554,28 +552,12 @@ const music = (() => {
     if (restart){
       try { active.currentTime = 0; } catch (error) { console.warn('[music] seek failed', error); }
     }
+    // Set a non-zero volume before play(). Safari can suspend animation frames
+    // while the tab is in the background, which would otherwise leave it silent.
+    active.volume = level[scene];
+    inactive.volume = 0;
     safelyPlay(active);
-    if (!inactive.paused) safelyPlay(inactive);
-
-    cancelAnimationFrame(fadeFrame);
-    const startedAt = performance.now();
-    const duration = 650;
-    const from = { title:tracks.title.volume, battle:tracks.battle.volume };
-
-    const step = now => {
-      const p = Math.min(1, (now - startedAt) / duration);
-      const eased = p * p * (3 - 2 * p);
-      for (const name of ['title', 'battle']){
-        const target = name === scene ? level[name] : 0;
-        tracks[name].volume = from[name] + (target - from[name]) * eased;
-      }
-      if (p < 1){
-        fadeFrame = requestAnimationFrame(step);
-      } else if (inactive.currentTime > 0){
-        inactive.pause();
-      }
-    };
-    fadeFrame = requestAnimationFrame(step);
+    if (!inactive.paused) inactive.pause();
   }
 
   for (const [name, track] of Object.entries(tracks)){
