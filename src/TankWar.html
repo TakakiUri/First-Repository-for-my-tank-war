@@ -51,6 +51,93 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
+/* ---- 音乐资源加载页 ---- */
+body.is-loading{overflow:hidden}
+body.is-loading .cabinet,
+body.is-loading .pad{visibility:hidden}
+.loading{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:
+    radial-gradient(90% 70% at 50% 42%, #1b222c 0%, #080b0f 68%, #030507 100%);
+  opacity:1;
+  visibility:visible;
+  transition:opacity .22s ease, visibility .22s;
+}
+.loading[hidden]{display:none}
+body:not(.is-loading) .loading{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.loading-panel{
+  width:min(440px, 100%);
+  padding:26px 24px 22px;
+  border:1px solid var(--edge);
+  border-radius:10px;
+  background:linear-gradient(180deg, #161c24, #0b0f14);
+  box-shadow:0 24px 70px rgba(0,0,0,.65), 0 0 34px rgba(240,208,48,.08);
+}
+.loading-kicker{
+  font-family:var(--pixel);
+  font-size:9px;
+  letter-spacing:.12em;
+  color:var(--phosphor-dim);
+}
+.loading-title{
+  margin:12px 0 24px;
+  font-family:var(--pixel);
+  font-size:clamp(16px, 5vw, 24px);
+  color:var(--phosphor);
+  text-shadow:0 0 16px rgba(240,208,48,.35);
+}
+.loading-progress{
+  height:12px;
+  padding:2px;
+  border:1px solid var(--edge);
+  background:#05070a;
+}
+.loading-bar{
+  width:0;
+  height:100%;
+  background:repeating-linear-gradient(
+    90deg, var(--phosphor) 0 8px, #b89d16 8px 10px);
+  box-shadow:0 0 12px rgba(240,208,48,.35);
+  transition:width .16s linear;
+}
+.loading-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:12px;
+  font-size:12px;
+  color:var(--ink-dim);
+}
+.loading-percent{
+  flex:none;
+  font-family:var(--pixel);
+  font-size:10px;
+  color:var(--ink);
+}
+.loading-retry{
+  display:block;
+  margin:20px auto 0;
+  padding:8px 14px;
+  font-family:var(--pixel);
+  font-size:9px;
+  color:var(--phosphor);
+  background:#1b2129;
+  border:1px solid var(--phosphor-dim);
+  border-radius:4px;
+  cursor:pointer;
+}
+.loading-retry[hidden]{display:none}
+
 /* ---- 机箱 ---- */
 .cabinet{
   width:min(100%, calc((100svh - 210px) * 512 / 416), 900px);
@@ -243,7 +330,22 @@ body{
 }
 </style>
 </head>
-<body>
+<body class="is-loading">
+
+<div class="loading" id="loading" role="status" aria-live="polite">
+  <div class="loading-panel">
+    <div class="loading-kicker">PREPARING AUDIO</div>
+    <div class="loading-title">TANK LOADING</div>
+    <div class="loading-progress" id="loadingProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="loading-bar" id="loadingBar"></div>
+    </div>
+    <div class="loading-meta">
+      <span id="loadingText">正在准备音乐资源…</span>
+      <strong class="loading-percent" id="loadingPercent">0%</strong>
+    </div>
+    <button class="loading-retry" id="loadingRetry" type="button" hidden>重新加载</button>
+  </div>
+</div>
 
 <div class="cabinet">
   <div class="marquee">
@@ -261,7 +363,7 @@ body{
     <span>
       <kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移动　<kbd>空格</kbd> / <kbd>J</kbd> 开火　<kbd>P</kbd> 暂停
     </span>
-    <button class="mute" id="mute" type="button" aria-pressed="true" aria-label="关闭声音">SOUND ON</button>
+    <button class="mute" id="mute" type="button" aria-pressed="false" aria-label="开启声音">SOUND OFF</button>
   </div>
 </div>
 
@@ -412,7 +514,7 @@ if (document.fonts && document.fonts.load){
 /* ============================================================
    音效
    ============================================================ */
-let AC = null, muted = false, noiseBuf = null;
+let AC = null, muted = true, noiseBuf = null;
 const SFX_GAIN = 2.6;
 
 function ensureAudio(){
@@ -480,24 +582,29 @@ const sfx = {
 const music = (() => {
   const sources = {
     title: [
-      ['../assets/audio/TankWar_BGM.m4a', 'audio/mp4'],
-      ['../assets/audio/TankWar_BGM.wav', 'audio/wav']
+      { url:'../assets/audio/TankWar_BGM.m4a', type:'audio/mp4' },
+      { url:'../assets/audio/TankWar_BGM.wav', type:'audio/wav' }
     ],
     battle: [
-      ['../assets/audio/TankWar_BGM_Loop.m4a', 'audio/mp4'],
-      ['../assets/audio/TankWar_BGM_Loop.wav', 'audio/wav']
+      { url:'../assets/audio/TankWar_BGM_Loop.m4a', type:'audio/mp4' },
+      { url:'../assets/audio/TankWar_BGM_Loop.wav', type:'audio/wav' }
     ]
+  };
+  const labels = {
+    title:'正在加载初始界面音乐',
+    battle:'正在加载战斗音乐'
   };
   const level = { title:0.36, battle:0.42 };
   const tracks = {};
   const playAttempts = new WeakMap();
-  const sourceIndexes = { title:0, battle:0 };
+  const objectUrls = {};
+  let preparePromise = null;
   let scene = 'title', paused = false;
 
-  for (const [name, candidates] of Object.entries(sources)){
-    const track = new Audio(candidates[sourceIndexes[name]][0]);
+  for (const name of Object.keys(sources)){
+    const track = new Audio();
     track.loop = true;
-    track.preload = name === scene ? 'auto' : 'metadata';
+    track.preload = 'auto';
     track.playsInline = true;
     track.setAttribute('playsinline', '');
     track.volume = 0;
@@ -570,18 +677,126 @@ const music = (() => {
       safelyPlay(track);
     });
     track.addEventListener('error', () => {
-      if (sourceIndexes[name] + 1 < sources[name].length){
-        sourceIndexes[name] += 1;
-        track.src = sources[name][sourceIndexes[name]][0];
-        track.load();
-        if (shouldPlay(name)) safelyPlay(track);
-      } else {
-        console.warn('[music] audio source failed', name, track.error);
-      }
+      console.warn('[music] audio source failed', name, track.error);
     });
   }
 
+  async function fetchAudio(candidate, report){
+    const response = await fetch(candidate.url, { cache:'force-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const total = Number(response.headers.get('content-length')) || 0;
+    if (!response.body || typeof response.body.getReader !== 'function'){
+      const bytes = await response.arrayBuffer();
+      report(1);
+      return new Blob([bytes], { type:candidate.type });
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while (true){
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.byteLength;
+      if (total) report(Math.min(1, received / total));
+    }
+    report(1);
+    return new Blob(chunks, { type:candidate.type });
+  }
+
+  function waitForPlayable(track, report = () => {}){
+    return new Promise((resolve, reject) => {
+      const ready = () => {
+        cleanup();
+        resolve();
+      };
+      const failed = () => {
+        cleanup();
+        reject(track.error || new Error('audio element failed'));
+      };
+      const update = () => {
+        if (track.buffered.length && Number.isFinite(track.duration) && track.duration > 0){
+          report(Math.min(1, track.buffered.end(track.buffered.length - 1) / track.duration));
+        }
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error('music preload timed out'));
+      }, 20000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        track.removeEventListener('canplaythrough', ready);
+        track.removeEventListener('canplay', ready);
+        track.removeEventListener('error', failed);
+        track.removeEventListener('progress', update);
+        track.removeEventListener('loadedmetadata', update);
+      };
+
+      if (track.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA){
+        ready();
+        return;
+      }
+      track.addEventListener('canplaythrough', ready);
+      track.addEventListener('canplay', ready);
+      track.addEventListener('error', failed);
+      track.addEventListener('progress', update);
+      track.addEventListener('loadedmetadata', update);
+      track.load();
+    });
+  }
+
+  async function prepareTrack(name, start, span, onProgress){
+    const track = tracks[name];
+    let lastError = null;
+    for (const candidate of sources[name]){
+      const report = fraction => {
+        onProgress(start + span * Math.max(0, Math.min(1, fraction)), labels[name]);
+      };
+      try {
+        report(0);
+        let objectUrl;
+        try {
+          const blob = await fetchAudio(candidate, fraction => report(fraction * 0.88));
+          objectUrl = URL.createObjectURL(blob);
+          track.src = objectUrl;
+          await waitForPlayable(track, fraction => report(0.88 + fraction * 0.12));
+        } catch (fetchError){
+          // file:// 和部分内置浏览器不允许 fetch，改用媒体元素直接预载。
+          console.warn('[music] fetch preload failed, using media element', candidate.url, fetchError);
+          track.src = candidate.url;
+          await waitForPlayable(track, fraction => report(fraction));
+        }
+        if (objectUrls[name]) URL.revokeObjectURL(objectUrls[name]);
+        objectUrls[name] = objectUrl;
+        report(1);
+        return;
+      } catch (error){
+        lastError = error;
+        console.warn('[music] audio preload failed', candidate.url, error);
+      }
+    }
+    throw lastError || new Error(`unable to load ${name} music`);
+  }
+
+  function prepare(onProgress){
+    if (preparePromise) return preparePromise;
+    preparePromise = (async () => {
+      const names = Object.keys(sources);
+      for (let i = 0; i < names.length; i += 1){
+        const start = i / names.length;
+        const span = 1 / names.length;
+        await prepareTrack(names[i], start, span, onProgress);
+      }
+      onProgress(1, '音乐加载完成');
+    })();
+    preparePromise.catch(() => { preparePromise = null; });
+    return preparePromise;
+  }
+
   return {
+    prepare,
     init(){
       // A page already granted autoplay may start immediately. Otherwise the
       // first pointer/key gesture unlocks the intended scene.
@@ -1815,7 +2030,45 @@ function snap(){
   } catch (e) { /* 非 Artifact 环境，忽略 */ }
 }
 
-function boot(data){
+const loadingProgress = document.getElementById('loadingProgress');
+const loadingBar = document.getElementById('loadingBar');
+const loadingText = document.getElementById('loadingText');
+const loadingPercent = document.getElementById('loadingPercent');
+const loadingRetry = document.getElementById('loadingRetry');
+let bootData = null;
+let gameStarted = false;
+let loadingStarted = false;
+
+function updateLoading(value, label){
+  const percent = Math.max(0, Math.min(100, Math.round(value * 100)));
+  loadingBar.style.width = percent + '%';
+  loadingPercent.textContent = percent + '%';
+  loadingProgress.setAttribute('aria-valuenow', String(percent));
+  loadingText.textContent = label;
+}
+
+async function boot(data){
+  bootData = data || {};
+  if (gameStarted || loadingStarted) return;
+  loadingStarted = true;
+  document.getElementById('loading').hidden = false;
+  loadingRetry.hidden = true;
+  document.body.classList.add('is-loading');
+  updateLoading(0, '正在准备音乐资源…');
+
+  try {
+    await music.prepare(updateLoading);
+  } catch (error){
+    console.warn('[music] preload failed', error);
+    loadingText.textContent = '音乐加载失败，请检查网络后重试。';
+    loadingRetry.hidden = false;
+    loadingStarted = false;
+    return;
+  }
+
+  loadingText.textContent = '加载完成';
+  document.getElementById('loading').hidden = true;
+  document.body.classList.remove('is-loading');
   if (data && typeof data.hi === 'number') G.hi = data.hi;
   if (data && data.resume && typeof data.level === 'number'){
     G.level = Math.min(data.level, LEVELS.length - 1);
@@ -1828,7 +2081,11 @@ function boot(data){
     music.init();
   }
   requestAnimationFrame(frame);
+  gameStarted = true;
+  loadingStarted = false;
 }
+
+loadingRetry.addEventListener('click', () => boot(bootData));
 
 if (window.claude?.hot?.ready) window.claude.hot.ready(boot);
 else boot(window.claude?.hot?.data ?? {});
