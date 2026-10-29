@@ -1204,6 +1204,22 @@ const music = (() => {
       fadeTo(scene, false);
     },
     play(nextScene, restart = false){ fadeTo(nextScene, restart); },
+    startFresh(nextScene){
+      scene = nextScene;
+      paused = false;
+      restartPending = false;
+      stopAll();
+      try { tracks[scene].currentTime = 0; }
+      catch (error) { console.warn('[music] seek failed', error); }
+      if (muted) return;
+      if (!prepared[scene]){
+        preloadTrack(scene).catch(error => {
+          console.warn('[music] background preload failed', scene, error);
+        });
+        return;
+      }
+      activateScene(false);
+    },
     pause(){
       paused = true;
       stopAll();
@@ -1469,7 +1485,7 @@ const G = {
   level:0, score:0, lives:3, pLevel:0, hi:0,
   baseAlive:true, freeze:0, shovel:0,
   respawnT:0, spawnTimer:0, spawnIdx:0, playerSpawnIdx:0,
-  queue:[], maxField:4, timer:0, curtain:null, blink:0
+  queue:[], maxField:4, timer:0, startDelay:0, curtain:null, blink:0
 };
 
 let tanks = [], bullets = [], effects = [], powerups = [];
@@ -1908,10 +1924,19 @@ function startLevel(){
 
 function startGame(){
   G.level = 0; G.score = 0; G.lives = 3;
-  G.curtain = { t:1, phase:'open', cb:null };
-  startLevel();
-  music.play('battle', true);
-  sfx.start();
+  G.startDelay = 1.6;
+  G.curtain = {
+    t:0,
+    phase:'close',
+    cb:() => {
+      if (!G.curtain) return;
+      G.curtain.t = 1;
+      G.curtain.phase = 'hold';
+    }
+  };
+  G.state = 'starting';
+  clearMovement();
+  music.pause();
 }
 
 function stageClear(){
@@ -1962,6 +1987,8 @@ function updateCurtain(dt){
       const cb = c.cb; c.cb = null;
       if (cb) cb();
     }
+  } else if (c.phase === 'hold'){
+    return;
   } else {
     c.t -= dt * 2.4;
     if (c.t <= 0){ c.t = 0; G.curtain = null; }
@@ -2125,15 +2152,23 @@ function returnToTitle(){
   settingsOverlay.hidden = true;
   document.body.classList.remove('settings-open');
   exitConfirm.hidden = true;
-  G.state = 'title';
+  G.state = 'returning';
   G.timer = 0;
-  G.curtain = null;
-  player = null;
-  // Keep the paused music state while changing scenes so the battle track
-  // cannot briefly resume before the title track takes over.
   music.pause();
-  music.play('title', true);
-  music.resume();
+  G.curtain = {
+    t:0,
+    phase:'close',
+    cb:() => {
+      player = null;
+      G.state = 'title';
+      G.timer = 0;
+      music.startFresh('title');
+      if (G.curtain){
+        G.curtain.t = 1;
+        G.curtain.phase = 'open';
+      }
+    }
+  };
 }
 
 function toggleSettings(){
@@ -2197,10 +2232,7 @@ function confirmKey(){
   ensureAudio();
   music.unlock();
   if (G.state === 'title') startGame();
-  else if (G.state === 'over' || G.state === 'win'){
-    G.state = 'title'; G.timer = 0;
-    music.play('title', true);
-  }
+  else if (G.state === 'over' || G.state === 'win') returnToTitle();
 }
 
 window.addEventListener('keydown', e => {
@@ -2346,6 +2378,28 @@ function updatePlayer(dt){
 
 function update(dt){
   G.blink += dt;
+
+  if (G.state === 'starting'){
+    updateCurtain(dt);
+    if (G.curtain && G.curtain.phase === 'hold'){
+      G.startDelay = Math.max(0, G.startDelay - dt);
+      if (G.startDelay <= 0){
+        startLevel();
+        music.startFresh('battle');
+        sfx.start();
+        if (G.curtain){
+          G.curtain.t = 1;
+          G.curtain.phase = 'open';
+        }
+      }
+    }
+    return;
+  }
+
+  if (G.state === 'returning'){
+    updateCurtain(dt);
+    return;
+  }
 
   if (G.state === 'clear'){
     updateEffects(dt);
@@ -2626,17 +2680,25 @@ function drawCurtain(){
   ctx.fillRect(0, H - halfH, W, halfH);
 }
 
+function drawStartTransition(){
+  if (G.state !== 'starting' || !G.curtain || G.curtain.t < 0.92) return;
+  if (Math.floor(G.startDelay * 4) % 2) return;
+  pixelText('PRESS START', W / 2, H / 2 - 22, 18, '#111', 'center');
+  cjkText('准备战斗', W / 2, H / 2 + 18, 14, '#333');
+}
+
 function render(){
   screenSurface.classList.toggle('at-title', G.state === 'title');
   screenSurface.classList.toggle('in-game', G.state === 'play');
   mobileSettingsBtn.hidden =
     !mobileLayout.matches ||
     !['title', 'play'].includes(G.state) ||
+    !!G.curtain ||
     !settingsOverlay.hidden;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
-  if (G.state === 'title'){
+  if (G.state === 'title' || G.state === 'starting'){
     drawTitle();
   } else {
     ctx.save();
@@ -2652,6 +2714,7 @@ function render(){
     if (G.state !== 'play') drawOverlayMessage();
   }
   drawCurtain();
+  drawStartTransition();
 }
 
 /* ============================================================
