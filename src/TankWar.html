@@ -925,6 +925,8 @@ const music = (() => {
   };
   const level = { title:0.36, battle:0.42 };
   const tracks = {};
+  const gainNodes = {};
+  const failedGains = new Set();
   const playAttempts = new WeakMap();
   const objectUrls = {};
   const prepared = { title:false, battle:false };
@@ -944,6 +946,40 @@ const music = (() => {
 
   function shouldPlay(name){
     return !muted && !paused && name === scene;
+  }
+
+  function ensureTrackGain(name){
+    if (gainNodes[name]) return gainNodes[name];
+    if (failedGains.has(name)) return null;
+    const ac = ensureAudio();
+    if (!ac) return null;
+    try {
+      const source = ac.createMediaElementSource(tracks[name]);
+      const gain = ac.createGain();
+      gain.gain.value = 0;
+      source.connect(gain);
+      gain.connect(ac.destination);
+      gainNodes[name] = gain;
+      if (ac.state === 'suspended') ac.resume().catch(() => {});
+      return gain;
+    } catch (error){
+      failedGains.add(name);
+      console.warn('[music] Web Audio gain unavailable', name, error);
+      return null;
+    }
+  }
+
+  function setTrackVolume(name, value, allowCreate = true){
+    const track = tracks[name];
+    const gain = allowCreate ? ensureTrackGain(name) : gainNodes[name];
+    if (gain){
+      const ac = ensureAudio();
+      if (ac) gain.gain.setTargetAtTime(value, ac.currentTime, 0.015);
+      track.volume = 1;
+    } else {
+      try { track.volume = value; }
+      catch (error) { console.warn('[music] element volume unavailable', name, error); }
+    }
   }
 
   function safelyPlay(track){
@@ -970,8 +1006,8 @@ const music = (() => {
   }
 
   function stopAll(){
-    for (const track of Object.values(tracks)){
-      track.volume = 0;
+    for (const [name, track] of Object.entries(tracks)){
+      setTrackVolume(name, 0, false);
       track.pause();
     }
   }
@@ -984,10 +1020,10 @@ const music = (() => {
     if (restart){
       try { active.currentTime = 0; } catch (error) { console.warn('[music] seek failed', error); }
     }
-    // Set a non-zero volume before play(). Safari can suspend animation frames
-    // while the tab is in the background, which would otherwise leave it silent.
-    active.volume = level[scene] * VOLUME_STEPS[musicVolumeLevel];
-    inactive.volume = 0;
+    // GainNode keeps BGM volume adjustable on mobile browsers where changing
+    // HTMLMediaElement.volume directly is ignored.
+    setTrackVolume(scene, level[scene] * VOLUME_STEPS[musicVolumeLevel]);
+    setTrackVolume(scene === 'title' ? 'battle' : 'title', 0);
     safelyPlay(active);
     if (!inactive.paused) inactive.pause();
   }
@@ -1011,7 +1047,10 @@ const music = (() => {
 
   for (const [name, track] of Object.entries(tracks)){
     track.addEventListener('canplay', () => {
-      if (shouldPlay(name)) safelyPlay(track);
+      if (shouldPlay(name)){
+        setTrackVolume(name, level[name] * VOLUME_STEPS[musicVolumeLevel]);
+        safelyPlay(track);
+      }
     });
     track.addEventListener('ended', () => {
       if (!shouldPlay(name)) return;
@@ -1160,6 +1199,8 @@ const music = (() => {
       fadeTo(scene, false);
     },
     unlock(){
+      const ac = ensureAudio();
+      if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
       fadeTo(scene, false);
     },
     play(nextScene, restart = false){ fadeTo(nextScene, restart); },
@@ -1177,8 +1218,12 @@ const music = (() => {
     },
     setVolume(levelIndex){
       musicVolumeLevel = Math.max(0, Math.min(VOLUME_STEPS.length - 1, levelIndex));
-      if (!muted && !paused && prepared[scene]){
-        tracks[scene].volume = level[scene] * VOLUME_STEPS[musicVolumeLevel];
+      if (prepared[scene]){
+        setTrackVolume(
+          scene,
+          muted ? 0 : level[scene] * VOLUME_STEPS[musicVolumeLevel],
+          false
+        );
       }
     }
   };
