@@ -54,7 +54,8 @@ body{
 /* ---- 音乐资源加载页 ---- */
 body.is-loading{overflow:hidden}
 body.is-loading .cabinet,
-body.is-loading .pad{visibility:hidden}
+body.is-loading .pad,
+body.is-loading .mobile-settings{visibility:hidden}
 .loading{
   position:fixed;
   inset:0;
@@ -198,6 +199,213 @@ body:not(.is-loading) .loading{
   image-rendering:pixelated;
   image-rendering:crisp-edges;
 }
+.mobile-settings{
+  display:none;
+  position:absolute;
+  top:6px;
+  right:8px;
+  z-index:4;
+  width:36px;
+  height:36px;
+  place-items:center;
+  padding:0;
+  color:var(--phosphor);
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.screen.in-game .mobile-settings{
+  top:36%;
+  right:calc(9.375% - 18px);
+  transform:translateY(-50%);
+}
+.mobile-settings[hidden]{display:none}
+.mobile-settings:focus-visible{outline:2px solid var(--phosphor); outline-offset:2px}
+
+/* ---- 设置界面 ---- */
+.settings-overlay{
+  position:fixed;
+  inset:0;
+  z-index:60;
+  display:grid;
+  place-items:center;
+  padding:16px;
+  background:rgba(3,6,9,.82);
+  backdrop-filter:blur(5px);
+}
+.settings-overlay[hidden],
+.confirm-layer[hidden]{display:none}
+.settings-panel{
+  width:min(560px, 100%);
+  max-height:calc(100svh - 32px);
+  overflow:auto;
+  padding:24px;
+  border:1px solid var(--edge);
+  border-radius:12px;
+  background:
+    linear-gradient(180deg, rgba(27,34,43,.98), rgba(10,14,19,.99));
+  box-shadow:0 28px 90px rgba(0,0,0,.8), 0 0 34px rgba(240,208,48,.08);
+}
+.settings-head{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:20px;
+}
+.settings-kicker{
+  display:block;
+  margin-bottom:7px;
+  font-family:var(--pixel);
+  font-size:8px;
+  letter-spacing:.14em;
+  color:var(--phosphor-dim);
+}
+.settings-title{
+  margin:0;
+  font-family:var(--pixel);
+  font-size:18px;
+  font-weight:400;
+  color:var(--phosphor);
+}
+.settings-hint{font-size:11px; color:var(--ink-dim)}
+.settings-section{
+  padding:16px;
+  border:1px solid var(--edge);
+  border-radius:8px;
+  background:rgba(6,9,13,.55);
+}
+.settings-section + .settings-section{margin-top:12px}
+.settings-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  font-size:13px;
+  color:var(--ink);
+}
+.settings-value{
+  font-family:var(--pixel);
+  font-size:9px;
+  color:var(--phosphor);
+}
+.volume-control{
+  display:grid;
+  grid-template-columns:38px minmax(100px, 1fr) 38px;
+  align-items:center;
+  gap:10px;
+}
+.volume-control + .volume-control{margin-top:12px}
+.volume-name{
+  grid-column:1 / -1;
+  font-size:12px;
+  color:var(--ink-dim);
+}
+.step-button,
+.settings-button,
+.confirm-button,
+.control-choice{
+  color:var(--ink);
+  background:#1b2129;
+  border:1px solid var(--edge);
+  border-radius:6px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.step-button{
+  width:38px;
+  height:34px;
+  font-family:var(--pixel);
+  font-size:15px;
+}
+.step-button:hover,
+.settings-button:hover,
+.control-choice:hover{color:var(--phosphor); border-color:var(--phosphor-dim)}
+.step-button:disabled{opacity:.35; cursor:default}
+.volume-meter{
+  display:grid;
+  grid-template-columns:repeat(5, 1fr);
+  gap:5px;
+  height:20px;
+  padding:3px;
+  border:1px solid var(--edge);
+  background:#05070a;
+}
+.volume-meter span{
+  display:block;
+  border-radius:2px;
+  background:#252e39;
+  transition:background .12s, box-shadow .12s;
+}
+.volume-meter span.on{
+  background:var(--phosphor);
+  box-shadow:0 0 8px rgba(240,208,48,.25);
+}
+.control-choices{
+  display:none;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.control-choice{
+  min-height:38px;
+  padding:8px 10px;
+  font-size:12px;
+}
+.control-choice.selected{
+  color:#111;
+  background:var(--phosphor);
+  border-color:var(--phosphor);
+}
+.settings-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+.settings-button{
+  min-height:42px;
+  padding:9px 12px;
+  font-size:12px;
+}
+.settings-button.primary{
+  color:#111;
+  background:var(--phosphor);
+  border-color:var(--phosphor);
+}
+.settings-button.danger{color:#ef8179}
+.confirm-layer{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(0,0,0,.72);
+}
+.confirm-panel{
+  width:min(360px, 100%);
+  padding:20px;
+  border:1px solid var(--phosphor-dim);
+  border-radius:10px;
+  background:#10151c;
+  box-shadow:0 20px 60px rgba(0,0,0,.8);
+}
+.confirm-panel h3{
+  margin:0 0 8px;
+  font-family:var(--pixel);
+  font-size:13px;
+  font-weight:400;
+  color:var(--phosphor);
+}
+.confirm-panel p{margin:0; color:var(--ink-dim); font-size:12px; line-height:1.7}
+.confirm-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px}
+.confirm-button{min-height:38px; padding:8px 10px; font-size:12px}
+.confirm-button.confirm{color:#111; background:#ef8179; border-color:#ef8179}
+.mobile-only{display:none}
 /* CRT 扫描线 */
 .screen::after{
   content:"";
@@ -248,6 +456,7 @@ body:not(.is-loading) .loading{
 /* ---- 触屏手柄 ---- */
 .pad{display:none}
 @media (pointer:coarse), (max-width:720px){
+  .mobile-settings{display:grid}
   .pad{
     display:flex;
     align-items:center;
@@ -302,6 +511,54 @@ body:not(.is-loading) .loading{
   .dpad [data-dir="left"]{grid-area:2/1}
   .dpad [data-dir="right"]{grid-area:2/3}
   .dpad [data-dir="down"]{grid-area:3/2}
+  .joystick{
+    --jx:0px;
+    --jy:0px;
+    position:relative;
+    display:none;
+    width:148px;
+    height:148px;
+    flex:none;
+    border-radius:50%;
+    border:2px solid #34404e;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(240,208,48,.13) 0 30%, transparent 31%),
+      repeating-radial-gradient(circle at 50% 50%, #11171e 0 20px, #19212b 21px 22px);
+    box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 18px rgba(240,208,48,.06) inset;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+  }
+  .joystick::before,
+  .joystick::after{
+    content:"";
+    position:absolute;
+    inset:50% auto auto 50%;
+    background:#303b48;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .joystick::before{width:76%; height:1px}
+  .joystick::after{width:1px; height:76%}
+  .joystick-knob{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:58px;
+    height:58px;
+    border-radius:50%;
+    border:2px solid #5f6c79;
+    background:radial-gradient(circle at 38% 32%, #46515e, #18202a 68%);
+    box-shadow:0 7px 16px rgba(0,0,0,.65), 0 0 12px rgba(240,208,48,.1);
+    transform:translate(calc(-50% + var(--jx)), calc(-50% + var(--jy)));
+    pointer-events:none;
+  }
+  .pad[data-control="joystick"] .joystick{display:block}
+  .pad[data-control="joystick"] .dpad{display:none}
+  .pad[data-control="dpad"] .joystick{display:none}
+  .mobile-only{display:block}
+  .control-choices{display:grid}
   .fire{
     width:96px; height:96px;
     border-radius:50% !important;
@@ -321,9 +578,14 @@ body:not(.is-loading) .loading{
     border-radius:50%;
     background:currentColor;
   }
+  .settings-panel{padding:18px}
+  .settings-head{align-items:flex-start; flex-direction:column; gap:8px}
 }
 @media (max-width:520px){
   .marquee .sub{display:none}
+  .settings-panel{padding:14px}
+  .settings-section{padding:12px}
+  .settings-actions{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){
   *{transition:none !important; animation:none !important}
@@ -356,6 +618,7 @@ body:not(.is-loading) .loading{
   <div class="bezel">
     <div class="screen">
       <canvas id="game" width="512" height="416" aria-label="坦克大战游戏画面"></canvas>
+      <button class="mobile-settings" id="mobileSettings" type="button" aria-label="打开设置" hidden>⚙</button>
     </div>
   </div>
 
@@ -367,7 +630,10 @@ body:not(.is-loading) .loading{
   </div>
 </div>
 
-<div class="pad" id="pad">
+<div class="pad" id="pad" data-control="joystick">
+  <div class="joystick" id="joystick" role="group" aria-label="移动轮盘">
+    <div class="joystick-knob" id="joystickKnob"></div>
+  </div>
   <div class="dpad">
     <button type="button" data-dir="up" aria-label="上"></button>
     <button type="button" data-dir="left" aria-label="左"></button>
@@ -375,6 +641,67 @@ body:not(.is-loading) .loading{
     <button type="button" data-dir="down" aria-label="下"></button>
   </div>
   <button type="button" class="fire" data-fire aria-label="开火"></button>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <div class="settings-panel">
+    <div class="settings-head">
+      <div>
+        <span class="settings-kicker" id="settingsKicker">GAME PAUSED</span>
+        <h2 class="settings-title" id="settingsTitle">设置</h2>
+      </div>
+      <span class="settings-hint">按 P 或 Esc 继续游戏</span>
+    </div>
+
+    <section class="settings-section" aria-labelledby="audioSettingsTitle">
+      <div class="settings-label">
+        <span id="audioSettingsTitle">音量设置</span>
+      </div>
+      <div class="volume-control" data-volume="sfx">
+        <span class="volume-name">游戏音效 · 开火、道具与爆炸</span>
+        <button class="step-button" type="button" data-volume-step="-1" aria-label="降低游戏音效音量">−</button>
+        <div class="volume-meter" role="slider" aria-label="游戏音效音量" aria-valuemin="0" aria-valuemax="5" aria-valuenow="5">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <button class="step-button" type="button" data-volume-step="1" aria-label="提高游戏音效音量">+</button>
+      </div>
+      <div class="volume-control" data-volume="music">
+        <span class="volume-name">游戏音乐 · 背景音乐</span>
+        <button class="step-button" type="button" data-volume-step="-1" aria-label="降低游戏音乐音量">−</button>
+        <div class="volume-meter" role="slider" aria-label="游戏音乐音量" aria-valuemin="0" aria-valuemax="5" aria-valuenow="5">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <button class="step-button" type="button" data-volume-step="1" aria-label="提高游戏音乐音量">+</button>
+      </div>
+    </section>
+
+    <section class="settings-section mobile-only" aria-labelledby="controlSettingsTitle">
+      <div class="settings-label">
+        <span id="controlSettingsTitle">操作设置</span>
+        <span class="settings-value">仅手机端</span>
+      </div>
+      <div class="control-choices" role="group" aria-label="移动键款式">
+        <button class="control-choice selected" type="button" data-control-style="joystick" aria-pressed="true">轮盘移动</button>
+        <button class="control-choice" type="button" data-control-style="dpad" aria-pressed="false">方向键移动</button>
+      </div>
+    </section>
+
+    <div class="settings-actions">
+      <button class="settings-button primary" type="button" data-settings-action="resume">继续游戏</button>
+      <button class="settings-button danger" type="button" data-settings-action="exit">返回主界面</button>
+    </div>
+  </div>
+
+  <div class="confirm-layer" id="exitConfirm" hidden>
+    <div class="confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="exitConfirmTitle">
+      <h3 id="exitConfirmTitle">退出当前对局？</h3>
+      <p>返回初始界面后，本局进度不会保存。确定要退出吗？</p>
+      <div class="confirm-actions">
+        <button class="confirm-button" type="button" data-exit-action="cancel">继续游戏</button>
+        <button class="confirm-button confirm" type="button" data-exit-action="confirm">确认退出</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -391,7 +718,7 @@ const W = FIELD + PANEL;                // 512
 const H = FIELD;                        // 416
 const TANK = 32, BULLET = 8;
 const MAX_SHOTS_PER_LINE = 2;
-const GAME_VERSION = 'v1.2.1';
+const GAME_VERSION = 'v1.3.0';
 
 const EMPTY = 0, BRICK = 1, STEEL = 2, WATER = 3, TREE = 4, ICE = 5, BASE = 6;
 
@@ -516,6 +843,8 @@ if (document.fonts && document.fonts.load){
    ============================================================ */
 let AC = null, muted = true, noiseBuf = null;
 const SFX_GAIN = 2.6;
+const VOLUME_STEPS = [0, 0.2, 0.4, 0.6, 0.8, 1];
+let sfxVolumeLevel = 5, musicVolumeLevel = 5;
 
 function ensureAudio(){
   if (AC) return AC;
@@ -524,10 +853,10 @@ function ensureAudio(){
   return AC;
 }
 function tone(freq, dur, type, vol, slideTo){
-  if (muted) return;
+  if (muted || sfxVolumeLevel === 0) return;
   const ac = ensureAudio(); if (!ac) return;
   if (ac.state === 'suspended') ac.resume();
-  vol = Math.min(0.30, vol * SFX_GAIN);
+  vol = Math.min(0.30, vol * SFX_GAIN * VOLUME_STEPS[sfxVolumeLevel]);
   const t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = type || 'square';
@@ -539,10 +868,10 @@ function tone(freq, dur, type, vol, slideTo){
   o.start(t); o.stop(t + dur + 0.02);
 }
 function noise(dur, vol, freq){
-  if (muted) return;
+  if (muted || sfxVolumeLevel === 0) return;
   const ac = ensureAudio(); if (!ac) return;
   if (ac.state === 'suspended') ac.resume();
-  vol = Math.min(0.30, vol * SFX_GAIN);
+  vol = Math.min(0.30, vol * SFX_GAIN * VOLUME_STEPS[sfxVolumeLevel]);
   if (!noiseBuf){
     const len = Math.floor(ac.sampleRate * 0.5);
     noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
@@ -657,7 +986,7 @@ const music = (() => {
     }
     // Set a non-zero volume before play(). Safari can suspend animation frames
     // while the tab is in the background, which would otherwise leave it silent.
-    active.volume = level[scene];
+    active.volume = level[scene] * VOLUME_STEPS[musicVolumeLevel];
     inactive.volume = 0;
     safelyPlay(active);
     if (!inactive.paused) inactive.pause();
@@ -845,6 +1174,12 @@ const music = (() => {
     mute(on){
       if (on) stopAll();
       else fadeTo(scene, false);
+    },
+    setVolume(levelIndex){
+      musicVolumeLevel = Math.max(0, Math.min(VOLUME_STEPS.length - 1, levelIndex));
+      if (!muted && !paused && prepared[scene]){
+        tracks[scene].volume = level[scene] * VOLUME_STEPS[musicVolumeLevel];
+      }
     }
   };
 })();
@@ -1596,6 +1931,20 @@ const KEYDIR = {
   arrowleft:'left', a:'left', arrowright:'right', d:'right'
 };
 const dirStack = [];
+const settingsOverlay = document.getElementById('settingsOverlay');
+const exitConfirm = document.getElementById('exitConfirm');
+const mobileSettingsBtn = document.getElementById('mobileSettings');
+const screenSurface = document.querySelector('.screen');
+const settingsKicker = document.getElementById('settingsKicker');
+const settingsHint = settingsOverlay.querySelector('.settings-hint');
+const settingsResumeButton = settingsOverlay.querySelector('[data-settings-action="resume"]');
+const settingsExitButton = settingsOverlay.querySelector('[data-settings-action="exit"]');
+const pad = document.getElementById('pad');
+const joystick = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystickKnob');
+const mobileLayout = window.matchMedia('(pointer: coarse), (max-width: 720px)');
+let joystickDir = null;
+let joystickPointer = null;
 
 function pushDir(dir){
   const i = dirStack.indexOf(dir);
@@ -1605,6 +1954,151 @@ function pushDir(dir){
 function popDir(dir){
   const i = dirStack.indexOf(dir);
   if (i >= 0) dirStack.splice(i, 1);
+}
+
+function readSetting(key, fallback){
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === null) return fallback;
+    const value = Number(stored);
+    return Number.isInteger(value) ? value : fallback;
+  } catch (error){
+    return fallback;
+  }
+}
+
+function writeSetting(key, value){
+  try { localStorage.setItem(key, String(value)); }
+  catch (error) { /* 隐私模式下忽略持久化失败。 */ }
+}
+
+function readControlStyle(){
+  try {
+    const value = localStorage.getItem('tankwar.controlStyle');
+    return value === 'dpad' ? 'dpad' : 'joystick';
+  } catch (error){
+    return 'joystick';
+  }
+}
+
+sfxVolumeLevel = Math.max(0, Math.min(5, readSetting('tankwar.sfxVolume', 5)));
+musicVolumeLevel = Math.max(0, Math.min(5, readSetting('tankwar.musicVolume', 5)));
+music.setVolume(musicVolumeLevel);
+
+function syncVolumeControl(kind){
+  const control = settingsOverlay.querySelector(`[data-volume="${kind}"]`);
+  if (!control) return;
+  const level = kind === 'sfx' ? sfxVolumeLevel : musicVolumeLevel;
+  const meter = control.querySelector('.volume-meter');
+  meter.setAttribute('aria-valuenow', String(level));
+  meter.querySelectorAll('span').forEach((segment, index) => {
+    segment.classList.toggle('on', index < level);
+  });
+  const buttons = control.querySelectorAll('[data-volume-step]');
+  buttons[0].disabled = level === 0;
+  buttons[1].disabled = level === 5;
+}
+
+function setVolumeLevel(kind, level){
+  const next = Math.max(0, Math.min(5, level));
+  if (kind === 'sfx'){
+    sfxVolumeLevel = next;
+    writeSetting('tankwar.sfxVolume', next);
+  } else {
+    musicVolumeLevel = next;
+    music.setVolume(next);
+    writeSetting('tankwar.musicVolume', next);
+  }
+  syncVolumeControl(kind);
+}
+
+function setJoystickDirection(dir){
+  if (joystickDir === dir) return;
+  if (joystickDir) popDir(joystickDir);
+  joystickDir = dir;
+  if (dir) pushDir(dir);
+}
+
+function resetJoystick(){
+  joystickPointer = null;
+  joystick.style.setProperty('--jx', '0px');
+  joystick.style.setProperty('--jy', '0px');
+  setJoystickDirection(null);
+}
+
+function clearMovement(){
+  dirStack.length = 0;
+  fireHeld = false;
+  resetJoystick();
+  pad.querySelectorAll('[data-held]').forEach(button => button.removeAttribute('data-held'));
+}
+
+function setControlStyle(style, persist = true){
+  const next = style === 'dpad' ? 'dpad' : 'joystick';
+  pad.dataset.control = next;
+  settingsOverlay.querySelectorAll('[data-control-style]').forEach(button => {
+    const selected = button.dataset.controlStyle === next;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  clearMovement();
+  if (persist) writeSetting('tankwar.controlStyle', next);
+}
+
+function openSettings(){
+  const fromTitle = G.state === 'title';
+  if (!fromTitle && G.state !== 'play') return;
+  if (!fromTitle){
+    G.state = 'paused';
+    clearMovement();
+    music.pause();
+  }
+  exitConfirm.hidden = true;
+  settingsOverlay.hidden = false;
+  document.body.classList.add('settings-open');
+  settingsKicker.textContent = fromTitle ? 'GAME SETTINGS' : 'GAME PAUSED';
+  settingsResumeButton.textContent = fromTitle ? '关闭设置' : '继续游戏';
+  settingsExitButton.hidden = fromTitle;
+  settingsHint.textContent = fromTitle ? '调整完成后关闭设置' : '按 P 或 Esc 继续游戏';
+  syncVolumeControl('sfx');
+  syncVolumeControl('music');
+  setControlStyle(pad.dataset.control, false);
+}
+
+function resumeGame(){
+  exitConfirm.hidden = true;
+  settingsOverlay.hidden = true;
+  document.body.classList.remove('settings-open');
+  if (G.state === 'paused'){
+    G.state = 'play';
+    music.resume();
+  }
+}
+
+function returnToTitle(){
+  clearMovement();
+  settingsOverlay.hidden = true;
+  document.body.classList.remove('settings-open');
+  exitConfirm.hidden = true;
+  G.state = 'title';
+  G.timer = 0;
+  G.curtain = null;
+  player = null;
+  // Keep the paused music state while changing scenes so the battle track
+  // cannot briefly resume before the title track takes over.
+  music.pause();
+  music.play('title', true);
+  music.resume();
+}
+
+function toggleSettings(){
+  if (!settingsOverlay.hidden){
+    resumeGame();
+    return;
+  }
+  if (G.state === 'play') openSettings();
+  else if (G.state === 'title') openSettings();
+  else if (G.state === 'paused') resumeGame();
 }
 
 const muteBtn = document.getElementById('mute');
@@ -1618,6 +2112,41 @@ function toggleMute(){
 }
 muteBtn.addEventListener('click', toggleMute);
 document.addEventListener('pointerdown', () => music.unlock(), { capture:true, passive:true });
+mobileSettingsBtn.addEventListener('click', openSettings);
+
+settingsOverlay.addEventListener('click', event => {
+  const stepButton = event.target.closest('[data-volume-step]');
+  if (stepButton){
+    const kind = stepButton.closest('[data-volume]').dataset.volume;
+    const current = kind === 'sfx' ? sfxVolumeLevel : musicVolumeLevel;
+    setVolumeLevel(kind, current + Number(stepButton.dataset.volumeStep));
+    if (kind === 'sfx') tone(880, 0.06, 'square', 0.045);
+    return;
+  }
+
+  const controlButton = event.target.closest('[data-control-style]');
+  if (controlButton){
+    setControlStyle(controlButton.dataset.controlStyle);
+    return;
+  }
+
+  const actionButton = event.target.closest('[data-settings-action]');
+  if (actionButton){
+    if (actionButton.dataset.settingsAction === 'resume') resumeGame();
+    else exitConfirm.hidden = false;
+    return;
+  }
+
+  const exitButton = event.target.closest('[data-exit-action]');
+  if (exitButton){
+    if (exitButton.dataset.exitAction === 'confirm') returnToTitle();
+    else exitConfirm.hidden = true;
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G.state === 'play') openSettings();
+});
 
 function confirmKey(){
   ensureAudio();
@@ -1631,21 +2160,24 @@ function confirmKey(){
 
 window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
-  if (KEYDIR[k] || k === ' ' || k === 'j' || k === 'p' || k === 'enter' || k === 'm')
+  if (KEYDIR[k] || k === ' ' || k === 'j' || k === 'p' || k === 'enter' ||
+      k === 'm' || k === 'escape')
     e.preventDefault();
   if (e.repeat) return;
   ensureAudio();
   music.unlock();
 
   if (k === 'm'){ toggleMute(); return; }
-  if (k === 'p'){
-    if (G.state === 'play'){ G.state = 'paused'; music.pause(); }
-    else if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
+  if (k === 'p'){ toggleSettings(); return; }
+  if (k === 'escape' && !exitConfirm.hidden){
+    exitConfirm.hidden = true;
     return;
   }
+  if (k === 'escape' && !settingsOverlay.hidden){ resumeGame(); return; }
+  if (!settingsOverlay.hidden) return;
+  if (G.state === 'paused') return;
   if (k === 'enter' || k === ' '){
     if (G.state === 'title' || G.state === 'over' || G.state === 'win'){ confirmKey(); return; }
-    if (G.state === 'paused'){ G.state = 'play'; music.resume(); return; }
   }
   if (KEYDIR[k]) pushDir(KEYDIR[k]);
   if (k === ' ' || k === 'j') fireHeld = true;
@@ -1658,16 +2190,11 @@ window.addEventListener('keyup', e => {
 });
 
 window.addEventListener('blur', () => {
-  dirStack.length = 0;
-  fireHeld = false;
-  if (G.state === 'play'){
-    G.state = 'paused';
-    music.pause();
-  }
+  clearMovement();
+  if (G.state === 'play') openSettings();
 });
 
 /* 触屏手柄 */
-const pad = document.getElementById('pad');
 pad.addEventListener('contextmenu', e => e.preventDefault());
 pad.addEventListener('selectstart', e => e.preventDefault());
 pad.addEventListener('dragstart', e => e.preventDefault());
@@ -1679,13 +2206,12 @@ for (const btn of pad.querySelectorAll('button')){
     e.preventDefault();
     ensureAudio();
     music.unlock();
+    if (G.state !== 'play' && !isFire) return;
     btn.setAttribute('data-held', '');
     if (isFire){
       fireHeld = true;
       if (G.state === 'title' || G.state === 'over' || G.state === 'win') confirmKey();
-      else if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
     } else if (dir){
-      if (G.state === 'paused'){ G.state = 'play'; music.resume(); }
       pushDir(dir);
     }
   };
@@ -1701,6 +2227,54 @@ for (const btn of pad.querySelectorAll('button')){
   btn.addEventListener('pointerleave', up);
   btn.addEventListener('contextmenu', e => e.preventDefault());
 }
+
+joystick.addEventListener('pointerdown', event => {
+  if (G.state !== 'play') return;
+  event.preventDefault();
+  ensureAudio();
+  music.unlock();
+  joystickPointer = event.pointerId;
+  joystick.setPointerCapture(event.pointerId);
+  updateJoystick(event);
+});
+
+joystick.addEventListener('pointermove', event => {
+  if (event.pointerId !== joystickPointer) return;
+  event.preventDefault();
+  updateJoystick(event);
+});
+
+function finishJoystick(event){
+  if (event.pointerId !== joystickPointer) return;
+  resetJoystick();
+}
+
+function updateJoystick(event){
+  const rect = joystick.getBoundingClientRect();
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  const distance = Math.hypot(dx, dy);
+  const limit = Math.max(24, rect.width * 0.26);
+  const scale = distance > limit ? limit / distance : 1;
+  joystick.style.setProperty('--jx', `${dx * scale}px`);
+  joystick.style.setProperty('--jy', `${dy * scale}px`);
+
+  if (distance < 10){
+    setJoystickDirection(null);
+  } else if (Math.abs(dx) > Math.abs(dy)){
+    setJoystickDirection(dx < 0 ? 'left' : 'right');
+  } else {
+    setJoystickDirection(dy < 0 ? 'up' : 'down');
+  }
+}
+
+joystick.addEventListener('pointerup', finishJoystick);
+joystick.addEventListener('pointercancel', finishJoystick);
+joystick.addEventListener('lostpointercapture', finishJoystick);
+
+setControlStyle(readControlStyle(), false);
+syncVolumeControl('sfx');
+syncVolumeControl('music');
 
 /* ============================================================
    更新
@@ -1876,7 +2450,7 @@ function drawPanel(){
   // 剩余敌人
   const n = enemiesLeft();
   for (let i = 0; i < n; i++)
-    ctx.drawImage(ICON_ENEMY, FIELD + 14 + (i % 2) * 24, 18 + ((i / 2) | 0) * 16);
+    ctx.drawImage(ICON_ENEMY, FIELD + 7 + (i % 5) * 17, 18 + ((i / 5) | 0) * 16);
 
   // 剩余生命
   ctx.font = '8px "Press Start 2P", monospace';
@@ -1988,9 +2562,6 @@ function drawOverlayMessage(){
     pixelText('SCORE ' + String(G.score).padStart(5, '0'), W / 2, H / 2 + 8, 13, '#ffffff', 'center');
     if ((performance.now() / 500 | 0) % 2 === 0)
       pixelText('PRESS ENTER', W / 2, H / 2 + 60, 11, '#8a94a4', 'center');
-  } else if (G.state === 'paused'){
-    pixelText('PAUSE', W / 2, H / 2 - 16, 22, '#f0d030', 'center');
-    cjkText('按 P 继续', W / 2, H / 2 + 22, 15, '#9aa4b2');
   } else if (G.state === 'clear'){
     pixelText('STAGE ' + (G.level + 1) + ' CLEAR', W / 2, H / 2 - 30, 16, '#ffffff', 'center');
     cjkText('得分 ' + G.score, W / 2, H / 2 + 8, 15, '#f0d030');
@@ -2011,6 +2582,12 @@ function drawCurtain(){
 }
 
 function render(){
+  screenSurface.classList.toggle('at-title', G.state === 'title');
+  screenSurface.classList.toggle('in-game', G.state === 'play');
+  mobileSettingsBtn.hidden =
+    !mobileLayout.matches ||
+    !['title', 'play'].includes(G.state) ||
+    !settingsOverlay.hidden;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
