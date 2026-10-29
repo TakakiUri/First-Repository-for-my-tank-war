@@ -261,7 +261,7 @@ body{
     <span>
       <kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移动　<kbd>空格</kbd> / <kbd>J</kbd> 开火　<kbd>P</kbd> 暂停
     </span>
-    <button class="mute" id="mute" type="button" aria-pressed="false">SOUND ON</button>
+    <button class="mute" id="mute" type="button" aria-pressed="true" aria-label="关闭声音">SOUND ON</button>
   </div>
 </div>
 
@@ -412,7 +412,7 @@ if (document.fonts && document.fonts.load){
 /* ============================================================
    音效
    ============================================================ */
-let AC = null, muted = true, noiseBuf = null;
+let AC = null, muted = false, noiseBuf = null;
 const SFX_GAIN = 2.6;
 
 function ensureAudio(){
@@ -491,11 +491,11 @@ const music = (() => {
   const level = { title:0.36, battle:0.42 };
   const tracks = {};
   const playAttempts = new WeakMap();
+  const sourceIndexes = { title:0, battle:0 };
   let scene = 'title', paused = false;
 
   for (const [name, candidates] of Object.entries(sources)){
-    let sourceIndex = 0;
-    const track = new Audio(candidates[sourceIndex][0]);
+    const track = new Audio(candidates[sourceIndexes[name]][0]);
     track.loop = true;
     track.preload = name === scene ? 'auto' : 'metadata';
     track.playsInline = true;
@@ -570,9 +570,9 @@ const music = (() => {
       safelyPlay(track);
     });
     track.addEventListener('error', () => {
-      if (sourceIndex + 1 < sources[name].length){
-        sourceIndex += 1;
-        track.src = sources[name][sourceIndex][0];
+      if (sourceIndexes[name] + 1 < sources[name].length){
+        sourceIndexes[name] += 1;
+        track.src = sources[name][sourceIndexes[name]][0];
         track.load();
         if (shouldPlay(name)) safelyPlay(track);
       } else {
@@ -1370,7 +1370,8 @@ function toggleMute(){
   muted = !muted;
   ensureAudio();
   music.mute(muted);
-  muteBtn.textContent = muted ? 'SOUND ON' : 'SOUND OFF';
+  muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
+  muteBtn.setAttribute('aria-label', muted ? '开启声音' : '关闭声音');
   muteBtn.setAttribute('aria-pressed', String(!muted));
 }
 muteBtn.addEventListener('click', toggleMute);
