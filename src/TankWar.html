@@ -494,13 +494,8 @@ const music = (() => {
   let scene = 'title', paused = false, fadeFrame = 0;
 
   for (const [name, candidates] of Object.entries(sources)){
-    const track = new Audio();
-    for (const [src, type] of candidates){
-      const source = document.createElement('source');
-      source.src = src;
-      source.type = type;
-      track.appendChild(source);
-    }
+    let sourceIndex = 0;
+    const track = new Audio(candidates[sourceIndex][0]);
     track.loop = true;
     track.preload = name === scene ? 'auto' : 'metadata';
     track.playsInline = true;
@@ -593,7 +588,14 @@ const music = (() => {
       safelyPlay(track);
     });
     track.addEventListener('error', () => {
-      console.warn('[music] audio source failed', name, track.error);
+      if (sourceIndex + 1 < sources[name].length){
+        sourceIndex += 1;
+        track.src = sources[name][sourceIndex][0];
+        track.load();
+        if (shouldPlay(name)) safelyPlay(track);
+      } else {
+        console.warn('[music] audio source failed', name, track.error);
+      }
     });
   }
 
