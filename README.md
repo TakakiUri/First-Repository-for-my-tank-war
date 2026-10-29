@@ -3,8 +3,8 @@
 一款使用 HTML、CSS 和 JavaScript 编写的单页坦克大战小游戏。
 
 游戏默认静音，玩家主动开启声音后，初始界面播放长版背景音乐，进入战斗
-后切换为无缝循环背景音乐。按 `M` 或点击 `SOUND ON / OFF` 可以同时
-控制游戏音效与背景音乐。
+后切换为循环背景音乐。按 `M` 或点击右侧声音按钮可以同时控制游戏音效
+与背景音乐。
 
 ## 在线游玩
 
@@ -26,6 +26,8 @@ TankWar/
 │   └── TankWar.html
 ├── assets/
 │   └── audio/
+│       ├── TankWar_BGM.m4a
+│       ├── TankWar_BGM_Loop.m4a
 │       ├── TankWar_BGM.wav
 │       └── TankWar_BGM_Loop.wav
 ├── TankWar.iml

@@ -261,7 +261,7 @@ body{
     <span>
       <kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移动　<kbd>空格</kbd> / <kbd>J</kbd> 开火　<kbd>P</kbd> 暂停
     </span>
-    <button class="mute" id="mute" type="button" aria-pressed="true">SOUND OFF</button>
+    <button class="mute" id="mute" type="button" aria-pressed="false">SOUND ON</button>
   </div>
 </div>
 
@@ -478,26 +478,67 @@ const sfx = {
    背景音乐
    ============================================================ */
 const music = (() => {
-  const tracks = {
-    title: new Audio('../assets/audio/TankWar_BGM.wav'),
-    battle: new Audio('../assets/audio/TankWar_BGM_Loop.wav')
+  const sources = {
+    title: [
+      ['../assets/audio/TankWar_BGM.m4a', 'audio/mp4'],
+      ['../assets/audio/TankWar_BGM.wav', 'audio/wav']
+    ],
+    battle: [
+      ['../assets/audio/TankWar_BGM_Loop.m4a', 'audio/mp4'],
+      ['../assets/audio/TankWar_BGM_Loop.wav', 'audio/wav']
+    ]
   };
   const level = { title:0.36, battle:0.42 };
-  let scene = 'title', unlocked = false, paused = false, fadeFrame = 0;
+  const tracks = {};
+  const playAttempts = new WeakMap();
+  let scene = 'title', paused = false, fadeFrame = 0;
 
-  for (const track of Object.values(tracks)){
+  for (const [name, candidates] of Object.entries(sources)){
+    const track = new Audio();
+    for (const [src, type] of candidates){
+      const source = document.createElement('source');
+      source.src = src;
+      source.type = type;
+      track.appendChild(source);
+    }
     track.loop = true;
-    track.preload = 'auto';
+    track.preload = name === scene ? 'auto' : 'metadata';
+    track.playsInline = true;
+    track.setAttribute('playsinline', '');
     track.volume = 0;
+    tracks[name] = track;
+  }
+
+  function shouldPlay(name){
+    return !muted && !paused && name === scene;
   }
 
   function safelyPlay(track){
-    const attempt = track.play();
-    if (attempt) attempt.catch(() => {});
+    if (!track.paused && track.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (playAttempts.has(track)) return;
+
+    let attempt;
+    try {
+      attempt = track.play();
+    } catch (error){
+      console.warn('[music] playback failed', error);
+      return;
+    }
+    if (!attempt || typeof attempt.then !== 'function') return;
+
+    playAttempts.set(track, attempt);
+    const clear = () => {
+      if (playAttempts.get(track) === attempt) playAttempts.delete(track);
+    };
+    attempt.then(clear, error => {
+      clear();
+      if (error?.name !== 'AbortError') console.warn('[music] playback failed', error);
+    });
   }
 
   function stopAll(){
     cancelAnimationFrame(fadeFrame);
+    fadeFrame = 0;
     for (const track of Object.values(tracks)){
       track.volume = 0;
       track.pause();
@@ -506,7 +547,6 @@ const music = (() => {
 
   function fadeTo(nextScene, restart){
     scene = nextScene;
-    if (!unlocked) return;
     if (muted || paused){
       stopAll();
       return;
@@ -514,8 +554,12 @@ const music = (() => {
 
     const active = tracks[scene];
     const inactive = scene === 'title' ? tracks.battle : tracks.title;
-    if (restart) active.currentTime = 0;
-    if (active.paused) safelyPlay(active);
+    active.preload = 'auto';
+    inactive.preload = 'metadata';
+    if (restart){
+      try { active.currentTime = 0; } catch (error) { console.warn('[music] seek failed', error); }
+    }
+    safelyPlay(active);
     if (!inactive.paused) safelyPlay(inactive);
 
     cancelAnimationFrame(fadeFrame);
@@ -539,20 +583,28 @@ const music = (() => {
     fadeFrame = requestAnimationFrame(step);
   }
 
+  for (const [name, track] of Object.entries(tracks)){
+    track.addEventListener('canplay', () => {
+      if (shouldPlay(name)) safelyPlay(track);
+    });
+    track.addEventListener('ended', () => {
+      if (!shouldPlay(name)) return;
+      try { track.currentTime = 0; } catch (error) { console.warn('[music] loop failed', error); }
+      safelyPlay(track);
+    });
+    track.addEventListener('error', () => {
+      console.warn('[music] audio source failed', name, track.error);
+    });
+  }
+
   return {
     init(){
       // A page already granted autoplay may start immediately. Otherwise the
       // first pointer/key gesture unlocks the intended scene.
       if (muted) return;
-      const attempt = tracks[scene].play();
-      if (attempt) attempt.then(() => {
-        unlocked = true;
-        fadeTo(scene, false);
-      }).catch(() => {});
+      fadeTo(scene, false);
     },
     unlock(){
-      if (unlocked) return;
-      unlocked = true;
       fadeTo(scene, false);
     },
     play(nextScene, restart = false){ fadeTo(nextScene, restart); },
@@ -1334,8 +1386,8 @@ function toggleMute(){
   muted = !muted;
   ensureAudio();
   music.mute(muted);
-  muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
-  muteBtn.setAttribute('aria-pressed', String(muted));
+  muteBtn.textContent = muted ? 'SOUND ON' : 'SOUND OFF';
+  muteBtn.setAttribute('aria-pressed', String(!muted));
 }
 muteBtn.addEventListener('click', toggleMute);
 document.addEventListener('pointerdown', () => music.unlock(), { capture:true, passive:true });
